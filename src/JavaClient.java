@@ -9,6 +9,10 @@
  * @author sonle
  */
 import java.util.Scanner;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import thriftDemo.*;
 
 import org.apache.thrift.TException;
@@ -18,35 +22,77 @@ import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TSSLTransportFactory.TSSLTransportParameters;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
+import org.apache.thrift.transport.TTransportException;
 
 public class JavaClient {
+    private static final long NUM_OF_REQS = 10000;
+    private static long startTime, stopTime;
+    private static void startBenchmark() {
+        startTime = System.currentTimeMillis();
+    }
 
-    public static void main(String[] args) {
-        // This demo uses the simple server
-        try {
-            TTransport transport;
-            transport = new TSocket("localhost", 9090);
-            transport.open();
-            TProtocol protocol = new TBinaryProtocol(transport);
-            APIs.Client client = new APIs.Client(protocol);
-
-            perform(client);
-
-            transport.close();
-        } catch (TException x) {
-            x.printStackTrace();
-        }
+    private static void finishBenchmark() {
+        stopTime = System.currentTimeMillis();
+        double elapsedTimeSec = (double)(stopTime - startTime)/1000;
+        double reqPerSec = (double)NUM_OF_REQS/elapsedTimeSec;
+        System.out.println("=== RESULT ===");
+        System.out.println("> elapsedTimeSec: " + elapsedTimeSec);
+        System.out.println("> Req/s: " + reqPerSec);
     }
     
-    private static void perform(APIs.Client client) throws TException {
-//        Scanner scanner = new Scanner( System.in );
-//        System.out.print("Type your username:");
-//        String username = scanner.nextLine();
-        String username = "test";
-        client.startBenchmark();
-        for (int i = 0; i< 20000; i++){
-            client.increase(username);    
+    public static void main(String[] args) {
+        
+        startBenchmark();
+        boolean isDone = false;
+        for (long i = 0; i < NUM_OF_REQS; i++){
+            ClientThread ct = new ClientThread("test"+i);
+            ct.start();
+            if (i==NUM_OF_REQS-1) isDone = true;
         }
-        client.finishBenchmark();
+        if(isDone){
+            finishBenchmark();
+        }
+    }
+
+    static class ClientThread implements Runnable {
+
+        private Thread t;
+        private String threadName;
+
+        ClientThread(String name) {
+            threadName = name;
+            System.out.println("Creating " + threadName);
+        }
+
+        public void run() {
+            System.out.println("Running " + threadName);
+            try {
+                TTransport transport;
+                transport = new TSocket("localhost", 9090);
+                transport.open();
+                TProtocol protocol = new TBinaryProtocol(transport);
+                APIs.Client client = new APIs.Client(protocol);
+                perform(client, transport);
+            } catch (TTransportException ex) {
+                Logger.getLogger(JavaClient.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (TException ex) {
+                Logger.getLogger(JavaClient.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            System.out.println("Thread " + threadName + " exiting.");
+        }
+
+        public void start() {
+            System.out.println("Starting " + threadName);
+            if (t == null) {
+                t = new Thread(this, threadName);
+                t.start();
+            }
+        }
+
+        private void perform(APIs.Client client, TTransport transport) throws TException {
+            int respond = client.get("test");
+            transport.close();
+        }
+
     }
 }
