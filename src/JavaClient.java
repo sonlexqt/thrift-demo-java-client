@@ -39,9 +39,14 @@ public class JavaClient {
     }
     
     private static void perform(APIs.Client client) throws TException {
-        Scanner scanner = new Scanner( System.in );
-        System.out.print("Type your username:");
-        String username = scanner.nextLine();
-        client.increase(username);
+//        Scanner scanner = new Scanner( System.in );
+//        System.out.print("Type your username:");
+//        String username = scanner.nextLine();
+        String username = "test";
+        client.startBenchmark();
+        for (int i = 0; i< 20000; i++){
+            client.increase(username);    
+        }
+        client.finishBenchmark();
     }
 }
