@@ -142,8 +142,8 @@ public class JavaClient {
             System.out.println("Running " + threadName);
             try {
                 TTransport transport;
-                transport = new TFramedTransport(new TSocket("localhost", 9090));
-//                transport = new TSocket("localhost", 9090);
+//                transport = new TFramedTransport(new TSocket("localhost", 9090));
+                transport = new TSocket("localhost", 9090);
                 transport.open();
                 TProtocol protocol = new TBinaryProtocol(transport);
                 APIs.Client client = new APIs.Client(protocol);
@@ -167,6 +167,8 @@ public class JavaClient {
             //int respond = client.get("test");
             startTime = System.currentTimeMillis();
             boolean respond = client.ping();
+            do {} while (respond != true);
+            System.out.println("*** done " + threadName);
             transport.close();
             endTime = System.currentTimeMillis();
             rtt = endTime - startTime;
